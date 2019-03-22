@@ -1,5 +1,6 @@
 ﻿using Sitecore.Data.Items;
 using Sitecore.Diagnostics;
+using Sitecore.Globalization;
 using Sitecore.Links;
 using Sitecore.Resources.Media;
 using Sitecore.Web.UI.Sheer;
@@ -20,6 +21,13 @@ namespace Sitecore.Support.Shell.Controls.RichTextEditor.InsertLink
       if (this.Tabs.Active == 0 || this.Tabs.Active == 2)
       {
         Item item = this.InternalLinkTreeview.GetSelectionItem();
+
+        if (item != null)
+        {
+          Language lang = GetLanguageFromQuery();
+          item = item.Database.GetItem(item.ID, lang, Data.Version.Latest);
+        }
+
         if (item == null)
         {
           SheerResponse.Alert(Texts.PLEASE_SELECT_AN_ITEM);
@@ -47,11 +55,18 @@ namespace Sitecore.Support.Shell.Controls.RichTextEditor.InsertLink
       else
       {
         MediaItem item = this.MediaTreeview.GetSelectionItem();
+
+        if (item != null)
+        {
+          Language lang = GetLanguageFromQuery();
+          item = item.InnerItem.Database.GetItem(item.InnerItem.ID, lang, Data.Version.Latest);
+        }
+        
         if (item == null)
         {
           SheerResponse.Alert(Texts.PLEASE_SELECT_A_MEDIA_ITEM);
           return;
-        }
+        }        
 
         text = item.DisplayName;
 
@@ -83,5 +98,44 @@ namespace Sitecore.Support.Shell.Controls.RichTextEditor.InsertLink
       Assert.ArgumentNotNull(args, "args");
       SheerResponse.CloseWindow();
     }
+
+    protected virtual Language GetLanguageFromQuery()
+    {
+      string lang = Sitecore.Web.WebUtil.GetQueryString("la");
+      Language result = Sitecore.Context.Language;
+      if (!string.IsNullOrEmpty(lang))
+      {
+        result = Language.Parse(lang);
+      }
+      return result;
+    }
+
+    [UsedImplicitly]
+    private void OnMediaTreeviewClicked()
+    {
+      this.SetUploadButtonAvailability();
+    }
+
+    private void SetUploadButtonAvailability()
+    {
+      if (this.Tabs.Active != 1)
+      {
+        SheerResponse.Eval("document.getElementById('BtnUpload').style.display='none';");
+      }
+      else
+      {
+        SheerResponse.Eval("document.getElementById('BtnUpload').style.display='';");
+        Item selectionItem = this.MediaTreeview.GetSelectionItem();
+        if ((selectionItem == null) || !selectionItem.Access.CanCreate())
+        {
+          SheerResponse.Eval("document.getElementById('BtnUpload').disabled = true;");
+        }
+        else
+        {
+          SheerResponse.Eval("document.getElementById('BtnUpload').disabled = false;");
+        }
+      }
+    }
+
   }
 }
